@@ -1,0 +1,44 @@
+from telegram import Update, InputFile
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import os
+
+# Function to handle file reception
+def handle_file(update: Update, context):
+    # Save the file
+    file_id = update.message.document.file_id
+    new_file = context.bot.get_file(file_id)
+    file_path = f"./files/{file_id}"
+    new_file.download(file_path)
+    
+    # Generate a unique link to retrieve the file
+    redirect_link = f"https://your-domain.com/{file_id}"
+    
+    # Send the user the generated link
+    update.message.reply_text(f"File saved. Retrieve it here: {redirect_link}")
+
+# Function to handle file retrieval (assuming you host the files)
+def send_file(update: Update, context):
+    file_id = update.message.text.split('/')[-1]
+    file_path = f"./files/{file_id}"
+    
+    if os.path.exists(file_path):
+        context.bot.send_document(chat_id=update.effective_chat.id, document=open(file_path, 'rb'))
+    else:
+        update.message.reply_text("File not found.")
+
+# Setting up the bot
+def main():
+    # Replace 'YOUR_TOKEN' with the actual bot token
+    updater = Updater("YOUR_TOKEN", use_context=True)
+    
+    dp = updater.dispatcher
+    dp.add_handler(MessageHandler(Filters.document, handle_file))
+    
+    # Assuming you're sending a link like "/file/{file_id}"
+    dp.add_handler(MessageHandler(Filters.regex(r'/file/.+'), send_file))
+    
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == "__main__":
+    main()
